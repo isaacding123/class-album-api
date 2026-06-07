@@ -37,7 +37,7 @@ def submit():
     }), 200
 
 @app.route("/list", methods=["GET"])
-def list_all():
+def list():
     if os.path.exists(data_file):
         with open(data_file, "r", encoding = "utf-8") as file:
             data = json.load(file)
