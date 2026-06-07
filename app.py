@@ -36,13 +36,57 @@ def submit():
         "message": "fetched successfully"
     }), 200
 
-@app.route("/list", methods=["GET"])
+@app.route("/list", methods = ["GET"])
 def list():
     if os.path.exists(data_file):
         with open(data_file, "r", encoding = "utf-8") as file:
             data = json.load(file)
             return data, 200
     return {}, 200
+
+@app.route("/delete?name=<name>", methods = ["DELETE", "OPTIONS", "GET"])
+def delete(name):
+    if request.method == "OPTIONS":
+        return "", 200
+    if os.path.exists(data_file):
+        with open(data_file, "r", encoding = "utf-8") as file:
+            try:
+                tmp = json.load(file)
+                if name not in json.load(file):
+                    return jsonify({
+                        "status": "error",
+                        "message": f"'{name}' not found"
+                    }), 404
+            except:
+                return jsonify({
+                    "status": "error",
+                    "message": f"'{name}' not found"
+                }), 404
+    else:
+        return jsonify({
+            "status": "error",
+            "message": f"'{name}' not found"
+        }), 404
+    tmp.pop(name)
+    with open(data_file, "w", encoding = "utf-8") as file:
+        json.dump(tmp, file)
+    return jsonify({
+        "status": "success",
+        "message": f"deleted '{name}' successfully"
+    }), 200
+
+@app.route("/clear", methods = ["DELETE", "OPTIONS"])
+def clear():
+    if request.method == "OPTIONS":
+        return "", 200
+    if os.path.exists(data_file):
+        with open(data_file, "w", encoding = "utf-8") as file:
+            json.dump({}, file)
+    else:
+        return jsonify({
+            "status": "error",
+            "message": "No data found"
+        }), 404
 
 if __name__ == "__main__":
     import os
