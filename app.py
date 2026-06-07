@@ -36,6 +36,14 @@ def submit():
         "message": "fetched successfully"
     }), 200
 
+@app.route("/list", methods=["GET"])
+def list_all():
+    if os.path.exists(data_file):
+        with open(data_file, "r", encoding = "utf-8") as file:
+            data = json.load(file)
+            return data, 200
+    return {}, 200
+
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 8080))
