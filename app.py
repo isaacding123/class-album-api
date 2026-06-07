@@ -71,7 +71,7 @@ def delete(name):
         "message": f"deleted '{name}' successfully"
     }), 200
 
-@app.route("/clear", methods = ["DELETE", "OPTIONS"])
+@app.route("/clear", methods = ["DELETE", "OPTIONS", "GET"])
 def clear():
     if request.method == "OPTIONS":
         return "", 200
