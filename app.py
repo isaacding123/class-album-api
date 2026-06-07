@@ -39,7 +39,7 @@ def list():
             return data, 200
     return {}, 200
 
-@app.route("/delete?name=<name>", methods = ["DELETE", "OPTIONS", "GET"])
+@app.route("/del/<name>", methods = ["DELETE", "OPTIONS", "GET"])
 def delete(name):
     if request.method == "OPTIONS":
         return "", 200
@@ -48,7 +48,7 @@ def delete(name):
         with open(data_file, "r", encoding = "utf-8") as file:
             try:
                 tmp = json.load(file)
-                if name not in json.load(file):
+                if name not in tmp:
                     return jsonify({
                         "status": "error",
                         "message": f"'{name}' not found"
@@ -79,6 +79,10 @@ def clear():
     if os.path.exists(data_file):
         with open(data_file, "w", encoding = "utf-8") as file:
             json.dump({}, file)
+        return jsonify({
+            "status": "success",
+            "message": "deleted all data successfully"
+        }), 200
     else:
         return jsonify({
             "status": "error",
