@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+class_album.json
+venv/
+.env
+.DS_Store
