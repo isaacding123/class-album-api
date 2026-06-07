@@ -23,14 +23,9 @@ def submit():
                 tmp = json.load(file)
             except:
                 tmp = {}
-    is_update = name in tmp
     tmp[name] = data
     with open(data_file, "w", encoding = "utf-8") as file:
         json.dump(tmp, file)
-
-    print(f"{'update' if is_update else 'add'} {name}\n")
-    for key, val in data.items():
-        print(f"{key} : {'\033[3mnone\033[0m' if val == '' else val}")
     return jsonify({
         "status": "success",
         "message": "fetched successfully"
@@ -48,6 +43,7 @@ def list():
 def delete(name):
     if request.method == "OPTIONS":
         return "", 200
+    
     if os.path.exists(data_file):
         with open(data_file, "r", encoding = "utf-8") as file:
             try:
@@ -79,6 +75,7 @@ def delete(name):
 def clear():
     if request.method == "OPTIONS":
         return "", 200
+    
     if os.path.exists(data_file):
         with open(data_file, "w", encoding = "utf-8") as file:
             json.dump({}, file)
