@@ -8,23 +8,7 @@ from psycopg2.extras import RealDictCursor
 app = Flask(__name__)
 CORS(app, resources = {r"/*": {"origins": "*"}})
 
-def database(): return psycopg2.connect(os.environ.get('DATABASE_URL'))
-
-try:
-    con = database()
-    cur = con.cursor()
-    cur.execute('''
-        CREATE TABLE IF NOT EXISTS class_album (
-            name TEXT PRIMARY KEY,
-            data JSONB
-        )
-    ''')
-    con.commit()
-    cur.close()
-    con.close()
-    print(50 * "=" + "\ndatabase connected\n" + 50 * "=")
-except Exception as err:
-    print(f"database error: {err}")
+def database(): return psycopg2.connect(database_url)
 
 @app.route("/submit", methods = ["POST", "OPTIONS", "GET"])
 def submit():
@@ -102,6 +86,22 @@ def clear():
     }), 200
 
 if __name__ == "__main__":
-    import os
+    database_url = os.environ.get('DATABASE_URL')
+    try:
+        con = database()
+        cur = con.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS class_album (
+                name TEXT PRIMARY KEY,
+                data JSONB
+            )
+        ''')
+        con.commit()
+        cur.close()
+        con.close()
+        print(50 * "=" + "\ndatabase connected\n" + 50 * "=")
+    except Exception as err:
+        print(f"database error: {err}")
+        
     port = int(os.environ.get("PORT", 8080))
     app.run(host = "0.0.0.0", port = port, debug = True)
