@@ -105,6 +105,24 @@ def clear():
         "message": "deleted all data successfully"
     }), 200
 
+@app.route("/find/<name>", methods = ["GET"])
+def find(name):
+    con = database()
+    cur = con.cursor(cursor_factory = RealDictCursor)
+    cur.execute("SELECT name, data FROM class_album WHERE name = %s", (name, ))
+    tmp = cur.fetchone()
+    cur.close()
+    con.close()
+    if tmp:
+        return jsonify({
+            "status": "success",
+            "data": tmp
+        }), 200
+    return jsonify({
+        "status": "error",
+        "message": f'"{name}" not found'
+    }), 404
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host = "0.0.0.0", port = port, debug = True)
