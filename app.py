@@ -2,11 +2,34 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import json
 import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 CORS(app, resources = {r"/*": {"origins": "*"}})
-data_file = "/tmp/class_album.json"
 app.config['JSON_AS_ASCII'] = False
+
+database_url = os.environ.get('DATABASE_URL')
+def database(): return psycopg2.connect(database_url)
+
+def database_init():
+    try:
+        con = database()
+        cur = con.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS class_album (
+                name TEXT PRIMARY KEY,
+                data JSONB
+            )
+        ''')
+        con.commit()
+        cur.close()
+        con.close()
+        print(50 * "=" + "\ndatabase connected\n" + 50 * "=")
+    except Exception as err:
+        print(f"database error: {err}")
+
+database_init()
 
 @app.route("/submit", methods = ["POST", "OPTIONS", "GET"])
 def submit():
@@ -14,83 +37,93 @@ def submit():
         return "successfully fetched", 200
     if request.method == "OPTIONS":
         return "", 200
-    
+
     data = request.get_json()
     name = data.get("name", "")
-    tmp = {}
-    if os.path.exists(data_file):
-        with open(data_file, "r", encoding = "utf-8") as file:
-            try:
-                tmp = json.load(file)
-            except:
-                tmp = {}
-    tmp[name] = data
-    with open(data_file, "w", encoding = "utf-8") as file:
-        json.dump(tmp, file)
+    con = database()
+    cur = con.cursor()
+    cur.execute('''
+        INSERT INTO class_album (name, data) 
+        VALUES (%s, %s)
+        ON CONFLICT (name) DO UPDATE SET data = EXCLUDED.data
+    ''', (name, json.dumps(data)))
+    con.commit()
+    cur.close()
+    con.close()
     return jsonify({
         "status": "success",
         "message": "fetched successfully"
     }), 200
 
 @app.route("/list", methods = ["GET"])
-def list():
-    if os.path.exists(data_file):
-        with open(data_file, "r", encoding = "utf-8") as file:
-            data = json.load(file)
-            return data, 200
-    return {}, 200
+def list_all():
+    con = database()
+    cur = con.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT name, data FROM class_album")
+    tmp = cur.fetchall()
+    cur.close()
+    con.close()
+    result = {}
+    for i in tmp:
+        result[i["name"]] = i["data"]
+    return result, 200
 
 @app.route("/del/<name>", methods = ["DELETE", "OPTIONS", "GET"])
-def delete(name):
+def dele(name):
     if request.method == "OPTIONS":
         return "", 200
-    
-    if os.path.exists(data_file):
-        with open(data_file, "r", encoding = "utf-8") as file:
-            try:
-                tmp = json.load(file)
-                if name not in tmp:
-                    return jsonify({
-                        "status": "error",
-                        "message": f"'{name}' not found"
-                    }), 404
-            except:
-                return jsonify({
-                    "status": "error",
-                    "message": f"'{name}' not found"
-                }), 404
-    else:
+
+    con = database()
+    cur = con.cursor()
+    cur.execute("DELETE FROM class_album WHERE name = %s RETURNING name", (name,))
+    tmp = cur.fetchone()
+    con.commit()
+    cur.close()
+    con.close()
+    if tmp:
         return jsonify({
-            "status": "error",
-            "message": f"'{name}' not found"
-        }), 404
-    tmp.pop(name)
-    with open(data_file, "w", encoding = "utf-8") as file:
-        json.dump(tmp, file)
+            "status": "success",
+            "message": f'deleted "{name}" successfully'
+        }), 200
     return jsonify({
-        "status": "success",
-        "message": f"deleted '{name}' successfully"
-    }), 200
+        "status": "error",
+        "message": f'"{name}" not found'
+    }), 404
 
 @app.route("/clear", methods = ["DELETE", "OPTIONS", "GET"])
 def clear():
     if request.method == "OPTIONS":
         return "", 200
-    
-    if os.path.exists(data_file):
-        with open(data_file, "w", encoding = "utf-8") as file:
-            json.dump({}, file)
+
+    con = database()
+    cur = con.cursor()
+    cur.execute("DELETE FROM class_album")
+    con.commit()
+    cur.close()
+    con.close()
+    return jsonify({
+        "status": "success",
+        "message": "deleted all data successfully"
+    }), 200
+
+@app.route("/find/<name>", methods = ["GET"])
+def find(name):
+    con = database()
+    cur = con.cursor(cursor_factory = RealDictCursor)
+    cur.execute("SELECT name, data FROM class_album WHERE name = %s", (name, ))
+    tmp = cur.fetchone()
+    cur.close()
+    con.close()
+    if tmp:
         return jsonify({
             "status": "success",
-            "message": "deleted all data successfully"
+            "data": tmp
         }), 200
-    else:
-        return jsonify({
-            "status": "error",
-            "message": "No data found"
-        }), 404
+    return jsonify({
+        "status": "error",
+        "message": f'"{name}" not found'
+    }), 404
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 8080))
     app.run(host = "0.0.0.0", port = port, debug = True)
